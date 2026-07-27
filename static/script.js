@@ -1,0 +1,576 @@
+// ==========================================================================
+// Signature AI Workbench - Google Gemini UI & Top P Script
+// ==========================================================================
+
+// --- STATE MANAGEMENT ---
+let conversationHistory = []; // Sent to backend for multi-turn dialogue
+let currentChatSession = [];  // Current active conversation items
+let savedSessionsList = [];   // Array of saved chat sessions stored in localStorage
+let activeSessionId = null;   // Active session UUID/timestamp
+
+let queryCount = 0;
+let totalLatency = 0;
+
+// Preset Persona Directives
+const PRESET_PERSONAS = {
+    cyber: "You are a Senior Cyber Security Auditor. Analyze code, server logs, and vulnerabilities concisely. Highlight risks and actionable fixes.",
+    linux: "You are a Linux CLI Expert. Provide exact, minimal Bash commands followed by a brief 2-bullet explanation.",
+    c_debug: "You are a C/C++ Compiler & Memory Debugger Expert. Identify buffer overflows, memory leaks, illegal pointers, and output corrected code.",
+    python: "You are a Senior Python Backend Architect. Focus on clean code, PEP 8 standards, fast performance, and robust error handling."
+};
+
+// --- DOM ELEMENTS ---
+const openSettingsBtn = document.getElementById('openSettingsBtn');
+const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+const settingsModal = document.getElementById('settingsModal');
+
+const newChatBtn = document.getElementById('newChatBtn');
+const chatHistoryList = document.getElementById('chatHistoryList');
+
+const sidebarUserName = document.getElementById('sidebarUserName');
+const sidebarUserPlan = document.getElementById('sidebarUserPlan');
+const userAvatarIcon = document.getElementById('userAvatarIcon');
+
+const userNameInput = document.getElementById('userNameInput');
+const userPlanInput = document.getElementById('userPlanInput');
+
+const chatWindow = document.getElementById('chatWindow');
+const chatCenterWrapper = document.getElementById('chatCenterWrapper');
+const welcomeHero = document.getElementById('welcomeHero');
+
+const userInput = document.getElementById('userInput');
+const contextInput = document.getElementById('contextInput');
+const contextDrawerContainer = document.getElementById('contextDrawerContainer');
+const sendBtn = document.getElementById('sendBtn');
+const clearChatBtn = document.getElementById('clearChatBtn');
+const scrollDownBtn = document.getElementById('scrollDownBtn');
+const activeModelPill = document.getElementById('activeModelPill');
+
+// Form Settings DOM
+const apiKeyInput = document.getElementById('apiKey');
+const toggleKeyVisibility = document.getElementById('toggleKeyVisibility');
+const keySavedTag = document.getElementById('keySavedTag');
+
+const urlPresetSelect = document.getElementById('urlPresetSelect');
+const customUrlGroup = document.getElementById('customUrlGroup');
+const customUrlInput = document.getElementById('customUrlInput');
+const modelNameInput = document.getElementById('modelNameInput');
+
+const personaRoleInput = document.getElementById('personaRoleInput');
+const generatePersonaBtn = document.getElementById('generatePersonaBtn');
+const activePersonaDirective = document.getElementById('activePersonaDirective');
+
+const themeSelect = document.getElementById('themeSelect');
+const fontSizeSelect = document.getElementById('fontSizeSelect');
+const tempSlider = document.getElementById('tempSlider');
+const tempValDisplay = document.getElementById('tempValDisplay');
+const topPSlider = document.getElementById('topPSlider');
+const topPValDisplay = document.getElementById('topPValDisplay');
+const historyMaxSelect = document.getElementById('historyMaxSelect');
+const toggleContextDrawer = document.getElementById('toggleContextDrawer');
+
+// --- INITIALIZATION ---
+document.addEventListener('DOMContentLoaded', () => {
+    loadSavedSettings();
+    loadChatSessions();
+    createNewChatSession();
+});
+
+function loadSavedSettings() {
+    // User Profile
+    const userName = localStorage.getItem('signature_ai_user_name') || 'Sujith cbs';
+    const userPlan = localStorage.getItem('signature_ai_user_plan') || 'Pro';
+    userNameInput.value = userName;
+    userPlanInput.value = userPlan;
+    updateUserProfileDisplay(userName, userPlan);
+
+    // API Key
+    const key = localStorage.getItem('signature_ai_key') || '';
+    apiKeyInput.value = key;
+    keySavedTag.style.display = key ? 'inline' : 'none';
+
+    // Base URL
+    const url = localStorage.getItem('signature_ai_url') || 'https://api.openai.com/v1/chat/completions';
+    const matchedOpt = Array.from(urlPresetSelect.options).find(opt => opt.value === url);
+    if (matchedOpt) {
+        urlPresetSelect.value = url;
+        customUrlGroup.style.display = 'none';
+    } else {
+        urlPresetSelect.value = 'custom';
+        customUrlGroup.style.display = 'block';
+        customUrlInput.value = url;
+    }
+
+    // Model Name
+    const model = localStorage.getItem('signature_ai_model') || 'gpt-4o-mini';
+    modelNameInput.value = model;
+    activeModelPill.innerText = model;
+
+    // Active System Prompt
+    const directive = localStorage.getItem('signature_ai_directive') || '';
+    activePersonaDirective.value = directive;
+
+    // Theme (Dark or Light Mode) & Font Size
+    const theme = localStorage.getItem('signature_ai_theme') || 'theme-dark';
+    const validTheme = (theme === 'theme-light') ? 'theme-light' : 'theme-dark';
+    themeSelect.value = validTheme;
+    document.body.className = `${validTheme} ${localStorage.getItem('signature_ai_fontsize') || 'font-md'}`;
+
+    const fontSize = localStorage.getItem('signature_ai_fontsize') || 'font-md';
+    fontSizeSelect.value = fontSize;
+
+    // Temperature & Top P & History
+    const temp = localStorage.getItem('signature_ai_temp') || '0.4';
+    tempSlider.value = temp;
+    tempValDisplay.innerText = temp;
+
+    const topP = localStorage.getItem('signature_ai_top_p') || '0.9';
+    topPSlider.value = topP;
+    topPValDisplay.innerText = topP;
+
+    const historyMax = localStorage.getItem('signature_ai_history') || '10';
+    historyMaxSelect.value = historyMax;
+
+    // Drawer toggle
+    const showDrawer = localStorage.getItem('signature_ai_drawer') !== 'false';
+    toggleContextDrawer.checked = showDrawer;
+    contextDrawerContainer.style.display = showDrawer ? 'block' : 'none';
+}
+
+function updateUserProfileDisplay(name, plan) {
+    sidebarUserName.innerText = name || 'User';
+    sidebarUserPlan.innerText = plan || 'Pro';
+    userAvatarIcon.innerText = (name || 'U').charAt(0).toUpperCase();
+}
+
+function saveSettings() {
+    const userName = userNameInput.value.trim() || 'Sujith cbs';
+    const userPlan = userPlanInput.value.trim() || 'Pro';
+    localStorage.setItem('signature_ai_user_name', userName);
+    localStorage.setItem('signature_ai_user_plan', userPlan);
+    updateUserProfileDisplay(userName, userPlan);
+
+    const key = apiKeyInput.value.trim();
+    localStorage.setItem('signature_ai_key', key);
+    keySavedTag.style.display = key ? 'inline' : 'none';
+
+    const url = urlPresetSelect.value === 'custom' ? customUrlInput.value.trim() : urlPresetSelect.value;
+    localStorage.setItem('signature_ai_url', url || 'https://api.openai.com/v1/chat/completions');
+
+    const model = modelNameInput.value.trim() || 'gpt-4o-mini';
+    localStorage.setItem('signature_ai_model', model);
+    activeModelPill.innerText = model;
+
+    localStorage.setItem('signature_ai_directive', activePersonaDirective.value.trim());
+
+    const theme = themeSelect.value;
+    const font = fontSizeSelect.value;
+    localStorage.setItem('signature_ai_theme', theme);
+    localStorage.setItem('signature_ai_fontsize', font);
+    document.body.className = `${theme} ${font}`;
+
+    localStorage.setItem('signature_ai_temp', tempSlider.value);
+    localStorage.setItem('signature_ai_top_p', topPSlider.value);
+    localStorage.setItem('signature_ai_history', historyMaxSelect.value);
+
+    const showDrawer = toggleContextDrawer.checked;
+    localStorage.setItem('signature_ai_drawer', showDrawer);
+    contextDrawerContainer.style.display = showDrawer ? 'block' : 'none';
+
+    settingsModal.classList.add('hidden');
+}
+
+// --- CHAT SESSION & HISTORY LOGIC ---
+
+function loadChatSessions() {
+    const raw = localStorage.getItem('signature_ai_chat_sessions');
+    if (raw) {
+        try {
+            savedSessionsList = JSON.parse(raw) || [];
+        } catch (e) {
+            savedSessionsList = [];
+        }
+    }
+    renderChatHistoryList();
+}
+
+function saveCurrentSessionToStorage() {
+    if (!activeSessionId || currentChatSession.length === 0) return;
+
+    const firstMsg = currentChatSession.find(m => m.sender === 'User');
+    const title = firstMsg ? (firstMsg.text.length > 28 ? firstMsg.text.substring(0, 28) + '...' : firstMsg.text) : 'New Chat';
+
+    const sessionObj = {
+        id: activeSessionId,
+        title: title,
+        timestamp: Date.now(),
+        conversationHistory: conversationHistory,
+        currentChatSession: currentChatSession
+    };
+
+    const existingIdx = savedSessionsList.findIndex(s => s.id === activeSessionId);
+    if (existingIdx >= 0) {
+        savedSessionsList[existingIdx] = sessionObj;
+    } else {
+        savedSessionsList.unshift(sessionObj);
+    }
+
+    localStorage.setItem('signature_ai_chat_sessions', JSON.stringify(savedSessionsList));
+    renderChatHistoryList();
+}
+
+function renderChatHistoryList() {
+    chatHistoryList.innerHTML = '';
+    savedSessionsList.forEach(session => {
+        const item = document.createElement('div');
+        item.classList.add('history-item');
+        if (session.id === activeSessionId) item.classList.add('active');
+
+        item.innerText = session.title || 'Chat Session';
+        item.addEventListener('click', () => switchSession(session.id));
+
+        chatHistoryList.appendChild(item);
+    });
+}
+
+function createNewChatSession() {
+    if (currentChatSession.length > 0) {
+        saveCurrentSessionToStorage();
+    }
+
+    activeSessionId = 'session_' + Date.now();
+    conversationHistory = [];
+    currentChatSession = [];
+
+    chatCenterWrapper.innerHTML = ``;
+    chatCenterWrapper.appendChild(welcomeHero);
+    welcomeHero.classList.remove('hidden');
+
+    renderChatHistoryList();
+}
+
+function switchSession(sessionId) {
+    if (activeSessionId === sessionId) return;
+
+    if (currentChatSession.length > 0) {
+        saveCurrentSessionToStorage();
+    }
+
+    const session = savedSessionsList.find(s => s.id === sessionId);
+    if (session) {
+        activeSessionId = session.id;
+        conversationHistory = session.conversationHistory || [];
+        currentChatSession = session.currentChatSession || [];
+
+        chatCenterWrapper.innerHTML = ``;
+        welcomeHero.classList.add('hidden');
+
+        currentChatSession.forEach(msg => {
+            const row = createChatGPTMessageRow(msg.sender, msg.text, msg.latency);
+            chatCenterWrapper.appendChild(row);
+        });
+
+        renderChatHistoryList();
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+}
+
+newChatBtn.addEventListener('click', createNewChatSession);
+
+// --- SETTINGS MODAL INTERACTION ---
+openSettingsBtn.addEventListener('click', () => settingsModal.classList.remove('hidden'));
+closeSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
+saveSettingsBtn.addEventListener('click', saveSettings);
+
+settingsModal.addEventListener('click', (e) => {
+    if (e.target === settingsModal) settingsModal.classList.add('hidden');
+});
+
+// Modal Tab Navigation
+document.querySelectorAll('.nav-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+        tab.classList.add('active');
+        const tabId = tab.getAttribute('data-tab');
+        document.getElementById(tabId).classList.add('active');
+    });
+});
+
+urlPresetSelect.addEventListener('change', () => {
+    customUrlGroup.style.display = urlPresetSelect.value === 'custom' ? 'block' : 'none';
+});
+
+toggleKeyVisibility.addEventListener('click', () => {
+    if (apiKeyInput.type === 'password') {
+        apiKeyInput.type = 'text';
+        toggleKeyVisibility.innerText = 'Hide';
+    } else {
+        apiKeyInput.type = 'password';
+        toggleKeyVisibility.innerText = 'Show';
+    }
+});
+
+tempSlider.addEventListener('input', () => {
+    tempValDisplay.innerText = tempSlider.value;
+});
+
+topPSlider.addEventListener('input', () => {
+    topPValDisplay.innerText = topPSlider.value;
+});
+
+document.querySelectorAll('.btn-preset-card').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const key = btn.getAttribute('data-preset');
+        if (PRESET_PERSONAS[key]) {
+            activePersonaDirective.value = PRESET_PERSONAS[key];
+        }
+    });
+});
+
+generatePersonaBtn.addEventListener('click', async () => {
+    const description = personaRoleInput.value.trim();
+    const key = apiKeyInput.value.trim();
+    const url = urlPresetSelect.value === 'custom' ? customUrlInput.value.trim() : urlPresetSelect.value;
+    const model = modelNameInput.value.trim() || 'gpt-4o-mini';
+
+    if (!description) {
+        alert("Please describe the desired persona.");
+        return;
+    }
+
+    generatePersonaBtn.innerText = "Synthesizing...";
+    generatePersonaBtn.disabled = true;
+
+    try {
+        const res = await fetch('/api/build-persona', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_description: description,
+                api_key: key,
+                base_url: url,
+                model: model
+            })
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+            activePersonaDirective.value = data.expanded_persona;
+        } else {
+            alert(`Error: ${data.error}`);
+        }
+    } catch (err) {
+        alert("Failed to reach backend server.");
+    } finally {
+        generatePersonaBtn.innerText = "Synthesize System Persona";
+        generatePersonaBtn.disabled = false;
+    }
+});
+
+// Prompt Suggestions Cards Click
+document.querySelectorAll('.suggestion-card').forEach(card => {
+    card.addEventListener('click', () => {
+        const promptText = card.getAttribute('data-prompt');
+        userInput.value = promptText + " ";
+        userInput.focus();
+    });
+});
+
+// Textarea auto-resize
+userInput.addEventListener('input', () => {
+    userInput.style.height = '32px';
+    userInput.style.height = Math.min(userInput.scrollHeight, 160) + 'px';
+});
+
+userInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+    }
+});
+
+sendBtn.addEventListener('click', sendMessage);
+
+clearChatBtn.addEventListener('click', () => {
+    if (confirm("Clear current conversation?")) {
+        conversationHistory = [];
+        currentChatSession = [];
+        chatCenterWrapper.innerHTML = ``;
+        chatCenterWrapper.appendChild(welcomeHero);
+        welcomeHero.classList.remove('hidden');
+        saveCurrentSessionToStorage();
+    }
+});
+
+chatWindow.addEventListener('scroll', () => {
+    const isAtBottom = chatWindow.scrollHeight - chatWindow.scrollTop <= chatWindow.clientHeight + 100;
+    if (isAtBottom) scrollDownBtn.classList.add('hidden');
+    else scrollDownBtn.classList.remove('hidden');
+});
+
+scrollDownBtn.addEventListener('click', () => {
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+});
+
+// --- MESSAGING LOGIC ---
+
+function createChatGPTMessageRow(sender, text, latencyMs = null) {
+    const row = document.createElement('div');
+    row.classList.add('message-row');
+    if (sender === 'User') row.classList.add('user-row');
+    else row.classList.add('ai-row');
+
+    const contentWrapper = document.createElement('div');
+    contentWrapper.classList.add('message-content');
+
+    const avatar = document.createElement('div');
+    avatar.classList.add('msg-avatar-icon');
+    avatar.innerText = sender === 'User' ? 'U' : 'AI';
+
+    const textBody = document.createElement('div');
+    textBody.classList.add('msg-text-body');
+
+    if (sender === 'AI') {
+        textBody.innerHTML = marked.parse(text);
+        if (latencyMs) {
+            const pill = document.createElement('span');
+            pill.classList.add('telemetry-pill');
+            pill.innerText = `${latencyMs}ms`;
+            textBody.appendChild(pill);
+        }
+    } else {
+        textBody.innerText = text;
+    }
+
+    if (sender === 'AI') {
+        contentWrapper.appendChild(avatar);
+        contentWrapper.appendChild(textBody);
+    } else {
+        contentWrapper.appendChild(textBody);
+    }
+
+    row.appendChild(contentWrapper);
+
+    if (sender === 'AI') {
+        const codeBlocks = textBody.querySelectorAll('pre');
+        codeBlocks.forEach(pre => {
+            const wrapper = document.createElement('div');
+            wrapper.classList.add('code-wrapper');
+
+            const copyBtn = document.createElement('button');
+            copyBtn.classList.add('btn-copy-code');
+            copyBtn.innerText = 'Copy Code';
+
+            copyBtn.addEventListener('click', () => {
+                const codeText = pre.querySelector('code')?.innerText || pre.innerText;
+                navigator.clipboard.writeText(codeText).then(() => {
+                    copyBtn.innerText = 'Copied!';
+                    setTimeout(() => copyBtn.innerText = 'Copy Code', 2000);
+                });
+            });
+
+            pre.parentNode.insertBefore(wrapper, pre);
+            wrapper.appendChild(pre);
+            wrapper.appendChild(copyBtn);
+        });
+    }
+
+    return row;
+}
+
+async function sendMessage() {
+    const text = userInput.value.trim();
+    const context = contextInput.value.trim();
+
+    const apiKey = localStorage.getItem('signature_ai_key') || '';
+    const baseUrl = localStorage.getItem('signature_ai_url') || 'https://api.openai.com/v1/chat/completions';
+    const model = localStorage.getItem('signature_ai_model') || 'gpt-4o-mini';
+    const systemPrompt = localStorage.getItem('signature_ai_directive') || '';
+    const temp = parseFloat(localStorage.getItem('signature_ai_temp') || '0.4');
+    const topP = parseFloat(localStorage.getItem('signature_ai_top_p') || '0.9');
+    const maxHistory = parseInt(localStorage.getItem('signature_ai_history') || '10');
+
+    if (!text) return;
+    if (!apiKey && !baseUrl.includes('localhost') && !baseUrl.includes('127.0.0.1')) {
+        alert("Please configure your API Key in Settings first.");
+        settingsModal.classList.remove('hidden');
+        return;
+    }
+
+    if (welcomeHero && !welcomeHero.classList.contains('hidden')) {
+        welcomeHero.classList.add('hidden');
+    }
+
+    const displayText = text + (context ? `\n\n[Attached Context Envelope (${context.length} chars)]` : "");
+    const userRow = createChatGPTMessageRow("User", displayText);
+    chatCenterWrapper.appendChild(userRow);
+
+    userInput.value = "";
+    contextInput.value = "";
+    userInput.style.height = "32px";
+
+    const typingRow = document.createElement('div');
+    typingRow.classList.add('message-row', 'ai-row');
+    typingRow.innerHTML = `
+        <div class="message-content">
+            <div class="msg-avatar-icon">AI</div>
+            <div class="msg-text-body">
+                <div class="typing-dots"><span></span><span></span><span></span></div>
+            </div>
+        </div>
+    `;
+    chatCenterWrapper.appendChild(typingRow);
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+
+    try {
+        const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                message: text,
+                context_data: context,
+                system_prompt: systemPrompt,
+                api_key: apiKey,
+                base_url: baseUrl,
+                model: model,
+                temperature: temp,
+                top_p: topP,
+                max_history: maxHistory,
+                history: conversationHistory
+            })
+        });
+
+        const data = await response.json();
+        chatCenterWrapper.removeChild(typingRow);
+
+        if (response.ok) {
+            const aiRow = createChatGPTMessageRow("AI", data.reply, data.latency_ms);
+            chatCenterWrapper.appendChild(aiRow);
+
+            if (window.hljs) {
+                aiRow.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
+            }
+
+            conversationHistory.push({ role: "user", content: text });
+            conversationHistory.push({ role: "assistant", content: data.reply });
+            currentChatSession.push({ sender: "User", text: displayText });
+            currentChatSession.push({ sender: "AI", text: data.reply, latency: data.latency_ms });
+
+            saveCurrentSessionToStorage();
+        } else {
+            const errRow = createChatGPTMessageRow("AI", `Error: ${data.error}`);
+            chatCenterWrapper.appendChild(errRow);
+        }
+    } catch (err) {
+        if (chatCenterWrapper.contains(typingRow)) {
+            chatCenterWrapper.removeChild(typingRow);
+        }
+        const errRow = createChatGPTMessageRow("AI", `Network Error: Unable to reach backend server.`);
+        chatCenterWrapper.appendChild(errRow);
+    }
+
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+}

@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signature AI Workbench</title>
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Marked.js & Highlight.js -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+
+<body class="theme-dark">
+    <div class="app-layout">
+        <!-- FIXED SIDEBAR (GEMINI STYLED) -->
+        <aside class="sidebar">
+            <div class="sidebar-top">
+                <div class="brand-header">
+                    <span class="brand-name">Signature AI</span>
+                </div>
+                <button id="newChatBtn" class="btn-new-chat">
+                    <span class="btn-plus-icon">+</span> New chat
+                </button>
+            </div>
+
+            <!-- Chat History List -->
+            <div class="chat-history-section">
+                <div class="history-label">Recents</div>
+                <div id="chatHistoryList" class="history-list">
+                    <!-- Session items populated dynamically by script.js -->
+                </div>
+            </div>
+
+            <!-- User Profile Footer -->
+            <div class="sidebar-user-footer">
+                <div class="user-profile-info">
+                    <div id="userAvatarIcon" class="user-avatar-circle">S</div>
+                    <div class="user-details">
+                        <span id="sidebarUserName" class="user-name-title">Sujith cbs</span>
+                        <span id="sidebarUserPlan" class="user-plan-badge">Pro</span>
+                    </div>
+                </div>
+                <button id="openSettingsBtn" class="btn-gear-settings" title="Settings">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                </button>
+            </div>
+        </aside>
+
+        <!-- MAIN CHAT CONTAINER -->
+        <main class="chat-container">
+            <!-- Top Header -->
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <div id="activeModelPill" class="model-pill">gpt-4o-mini</div>
+                </div>
+                <div class="top-bar-right">
+                    <button id="clearChatBtn" class="btn-icon-text" title="Clear Active Chat">Clear Chat</button>
+                </div>
+            </header>
+
+            <!-- Centered Scrollable Chat Window -->
+            <div id="chatWindow" class="chat-window">
+                <div id="chatCenterWrapper" class="chat-center-wrapper">
+                    <!-- Centered Welcome Screen -->
+                    <div id="welcomeHero" class="welcome-hero">
+                        <h1>What can I help with today?</h1>
+                        <p class="welcome-subtitle">Configure API Key and Model in <strong>Settings</strong> to get started.</p>
+
+                        <div class="prompt-suggestions-grid">
+                            <div class="suggestion-card" data-prompt="Analyze this code snippet for memory leaks or security vulnerabilities:">
+                                <div class="title">Audit Code Security</div>
+                                <div class="desc">Analyze buffer overflows & memory leaks</div>
+                            </div>
+                            <div class="suggestion-card" data-prompt="Provide the exact Linux command to check listening ports and sockets:">
+                                <div class="title">Check Network Sockets</div>
+                                <div class="desc">Linux CLI netstat / ss commands</div>
+                            </div>
+                            <div class="suggestion-card" data-prompt="Explain what this raw server log or traceback payload indicates:">
+                                <div class="title">Decode Traceback Log</div>
+                                <div class="desc">Parse exception stack traces</div>
+                            </div>
+                            <div class="suggestion-card" data-prompt="Refactor this function for clean architecture and speed:">
+                                <div class="title">Refactor Code</div>
+                                <div class="desc">Improve clarity & performance</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Floating Scroll Down Button -->
+            <button id="scrollDownBtn" class="scroll-btn hidden" title="Scroll to bottom">↓</button>
+
+            <!-- CENTERED BOTTOM INPUT BAR -->
+            <footer class="input-area">
+                <div class="input-center-container">
+                    <!-- Context Envelope Drawer -->
+                    <div id="contextDrawerContainer" class="context-drawer">
+                        <details>
+                            <summary>Attach Context Envelope / Code Block (Optional)</summary>
+                            <textarea id="contextInput"
+                                placeholder="Paste raw code snippets, server logs, or JSON payloads here..." rows="3"></textarea>
+                        </details>
+                    </div>
+
+                    <!-- Main Input Box Wrapper -->
+                    <div class="input-box-wrapper">
+                        <textarea id="userInput" placeholder="Ask Signature AI..." rows="1"></textarea>
+                        <button id="sendBtn" class="btn-send-chatgpt" title="Send message">↑</button>
+                    </div>
+
+                    <div class="input-footer-note">
+                        Signature AI supports OpenAI-compatible APIs. Adjust parameters in Settings.
+                    </div>
+                </div>
+            </footer>
+        </main>
+    </div>
+
+    <!-- SETTINGS MODAL DIALOG -->
+    <div id="settingsModal" class="modal-overlay hidden">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2>Workbench Settings</h2>
+                <button id="closeSettingsBtn" class="btn-close-modal">✕</button>
+            </div>
+
+            <div class="modal-nav">
+                <button class="nav-tab active" data-tab="tab-account">Account</button>
+                <button class="nav-tab" data-tab="tab-api">API & Model</button>
+                <button class="nav-tab" data-tab="tab-persona">Persona & System</button>
+                <button class="nav-tab" data-tab="tab-appearance">Appearance</button>
+                <button class="nav-tab" data-tab="tab-behavior">Chat Behavior</button>
+            </div>
+
+            <div class="modal-body">
+                <!-- TAB 0: ACCOUNT PROFILE -->
+                <div id="tab-account" class="tab-content active">
+                    <div class="form-group">
+                        <label for="userNameInput">User Display Name</label>
+                        <input type="text" id="userNameInput" placeholder="Sujith cbs">
+                    </div>
+                    <div class="form-group">
+                        <label for="userPlanInput">Account Badge Subtitle</label>
+                        <input type="text" id="userPlanInput" placeholder="Pro">
+                    </div>
+                </div>
+
+                <!-- TAB 1: API & MODEL -->
+                <div id="tab-api" class="tab-content">
+                    <div class="form-group">
+                        <label for="apiKey">
+                            API Key
+                            <span id="keySavedTag" class="status-saved" style="display: none;">Saved</span>
+                        </label>
+                        <div class="input-group">
+                            <input type="password" id="apiKey" placeholder="sk-..." autocomplete="off">
+                            <button type="button" id="toggleKeyVisibility" class="btn-eye">Show</button>
+                        </div>
+                        <span class="form-help">Enter your OpenAI, Groq, OpenRouter, or local API Key.</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="urlPresetSelect">API Provider Endpoint</label>
+                        <select id="urlPresetSelect">
+                            <option value="https://api.openai.com/v1/chat/completions">OpenAI (https://api.openai.com/v1/chat/completions)</option>
+                            <option value="https://api.groq.com/openai/v1/chat/completions">Groq Cloud (https://api.groq.com/openai/v1/chat/completions)</option>
+                            <option value="https://openrouter.ai/api/v1/chat/completions">OpenRouter (https://openrouter.ai/api/v1/chat/completions)</option>
+                            <option value="http://localhost:11434/v1/chat/completions">Local Ollama (http://localhost:11434/v1/chat/completions)</option>
+                            <option value="custom">Custom Endpoint Base URL...</option>
+                        </select>
+                    </div>
+
+                    <div id="customUrlGroup" class="form-group" style="display: none;">
+                        <label for="customUrlInput">Custom Base URL</label>
+                        <input type="text" id="customUrlInput" placeholder="http://localhost:8000/v1/chat/completions">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="modelNameInput">Model Name</label>
+                        <input type="text" id="modelNameInput" placeholder="e.g. gpt-4o-mini, llama-3.3-70b-versatile, claude-3.5-sonnet">
+                        <span class="form-help">Specify the exact model ID provided by your API endpoint.</span>
+                    </div>
+                </div>
+
+                <!-- TAB 2: PERSONA & SYSTEM -->
+                <div id="tab-persona" class="tab-content">
+                    <div class="form-group">
+                        <label>Quick Persona Presets</label>
+                        <div class="preset-grid">
+                            <button class="btn-preset-card" data-preset="cyber">Cyber Auditor</button>
+                            <button class="btn-preset-card" data-preset="linux">Linux CLI</button>
+                            <button class="btn-preset-card" data-preset="c_debug">C/C++ Debug</button>
+                            <button class="btn-preset-card" data-preset="python">Python Spec</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="personaRoleInput">Dynamic Persona Builder</label>
+                        <textarea id="personaRoleInput" placeholder="Describe role (e.g. Senior Security Engineer)..." rows="2"></textarea>
+                        <button id="generatePersonaBtn" class="btn-secondary" style="margin-top: 6px;">Synthesize System Persona</button>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="activePersonaDirective">Active System Directive</label>
+                        <textarea id="activePersonaDirective" placeholder="Active system prompt..." rows="4"></textarea>
+                    </div>
+                </div>
+
+                <!-- TAB 3: APPEARANCE -->
+                <div id="tab-appearance" class="tab-content">
+                    <div class="form-group">
+                        <label for="themeSelect">Theme Mode</label>
+                        <select id="themeSelect">
+                            <option value="theme-dark" selected>Dark Mode (Google Gemini)</option>
+                            <option value="theme-light">Light Mode</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="fontSizeSelect">Font Size</label>
+                        <select id="fontSizeSelect">
+                            <option value="font-sm">Small (14px)</option>
+                            <option value="font-md" selected>Medium (15px)</option>
+                            <option value="font-lg">Large (17px)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- TAB 4: CHAT BEHAVIOR -->
+                <div id="tab-behavior" class="tab-content">
+                    <div class="form-group">
+                        <label for="tempSlider">
+                            Temperature: <strong id="tempValDisplay">0.4</strong>
+                        </label>
+                        <input type="range" id="tempSlider" min="0" max="1" step="0.05" value="0.4">
+                        <span class="form-help">Lower values make responses more precise; higher values make responses creative.</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="topPSlider">
+                            Top P Sampling: <strong id="topPValDisplay">0.9</strong>
+                        </label>
+                        <input type="range" id="topPSlider" min="0" max="1" step="0.05" value="0.9">
+                        <span class="form-help">Controls nucleus sampling probability threshold.</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="historyMaxSelect">Conversation History Memory</label>
+                        <select id="historyMaxSelect">
+                            <option value="5">Last 5 turns</option>
+                            <option value="10" selected>Last 10 turns (Recommended)</option>
+                            <option value="20">Last 20 turns</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group flex-row">
+                        <label for="toggleContextDrawer">Enable Context Envelope Drawer</label>
+                        <input type="checkbox" id="toggleContextDrawer" checked>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button id="saveSettingsBtn" class="btn-save-settings">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
