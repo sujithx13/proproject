@@ -19,6 +19,32 @@ const PRESET_PERSONAS = {
     python: "You are a Senior Python Backend Architect. Focus on clean code, PEP 8 standards, fast performance, and robust error handling."
 };
 
+let GROQ_DEFAULT_KEY = '';
+let GROQ_DEFAULT_MODEL = 'qwen/qwen3.8-27b';
+
+async function fetchServerConfig() {
+    try {
+        const res = await fetch('/api/config');
+        if (res.ok) {
+            const data = await res.json();
+            if (data.groq_default_key) {
+                GROQ_DEFAULT_KEY = data.groq_default_key;
+            }
+            if (data.groq_default_model) {
+                GROQ_DEFAULT_MODEL = data.groq_default_model;
+            }
+            const currentUrl = localStorage.getItem('signature_ai_url') || urlPresetSelect.value;
+            const currentKey = apiKeyInput.value.trim();
+            if (currentUrl.includes('groq') && !currentKey && GROQ_DEFAULT_KEY) {
+                apiKeyInput.value = GROQ_DEFAULT_KEY;
+                keySavedTag.style.display = 'inline';
+            }
+        }
+    } catch (e) {
+        console.warn('Could not load server config:', e);
+    }
+}
+
 // --- DOM ELEMENTS ---
 const openSettingsBtn = document.getElementById('openSettingsBtn');
 const closeSettingsBtn = document.getElementById('closeSettingsBtn');
@@ -72,6 +98,7 @@ const toggleContextDrawer = document.getElementById('toggleContextDrawer');
 
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
+    fetchServerConfig();
     loadSavedSettings();
     loadChatSessions();
     createNewChatSession();
@@ -85,11 +112,6 @@ function loadSavedSettings() {
     userPlanInput.value = userPlan;
     updateUserProfileDisplay(userName, userPlan);
 
-    // API Key
-    const key = localStorage.getItem('signature_ai_key') || '';
-    apiKeyInput.value = key;
-    keySavedTag.style.display = key ? 'inline' : 'none';
-
     // Base URL
     const url = localStorage.getItem('signature_ai_url') || 'https://api.openai.com/v1/chat/completions';
     const matchedOpt = Array.from(urlPresetSelect.options).find(opt => opt.value === url);
@@ -102,8 +124,19 @@ function loadSavedSettings() {
         customUrlInput.value = url;
     }
 
+    // API Key
+    let key = localStorage.getItem('signature_ai_key') || '';
+    if (!key && url.includes('groq')) {
+        key = GROQ_DEFAULT_KEY;
+    }
+    apiKeyInput.value = key;
+    keySavedTag.style.display = key ? 'inline' : 'none';
+
     // Model Name
-    const model = localStorage.getItem('signature_ai_model') || 'gpt-4o-mini';
+    let model = localStorage.getItem('signature_ai_model') || 'gpt-4o-mini';
+    if (url.includes('groq') && (model === 'gpt-4o-mini' || model.includes('llama'))) {
+        model = GROQ_DEFAULT_MODEL;
+    }
     modelNameInput.value = model;
     activeModelPill.innerText = model;
 
@@ -301,6 +334,15 @@ document.querySelectorAll('.nav-tab').forEach(tab => {
 
 urlPresetSelect.addEventListener('change', () => {
     customUrlGroup.style.display = urlPresetSelect.value === 'custom' ? 'block' : 'none';
+    if (urlPresetSelect.value.includes('groq')) {
+        apiKeyInput.value = GROQ_DEFAULT_KEY;
+        keySavedTag.style.display = 'inline';
+        modelNameInput.value = GROQ_DEFAULT_MODEL;
+    }
+});
+
+apiKeyInput.addEventListener('input', () => {
+    keySavedTag.style.display = apiKeyInput.value.trim() ? 'inline' : 'none';
 });
 
 toggleKeyVisibility.addEventListener('click', () => {

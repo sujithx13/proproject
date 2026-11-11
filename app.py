@@ -1,11 +1,30 @@
+import os
 import time
 from flask import Flask, jsonify, request, send_from_directory
 import requests
 
 app = Flask(__name__, static_folder="static")
 
+env_file = os.path.join(os.path.dirname(__file__), ".env")
+if os.path.exists(env_file):
+    with open(env_file, "r") as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, v = line.split("=", 1)
+                os.environ.setdefault(k.strip(), v.strip())
+
 DEFAULT_OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 DEFAULT_MODEL = "gpt-4o-mini"
+
+
+@app.route("/api/config", methods=["GET"])
+def get_config():
+    return jsonify({
+        "groq_default_key": os.environ.get("GROQ_DEFAULT_KEY", ""),
+        "groq_default_model": "qwen/qwen3.8-27b"
+    })
+
 
 
 def call_openai_compatible_api(endpoint_url, api_key, model, messages, temperature=0.4, top_p=0.9):
@@ -135,4 +154,5 @@ def serve_static(path):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000, debug=True)
+    port = int(os.environ.get("PORT", 6769))
+    app.run(host="0.0.0.0", port=port, debug=True)
