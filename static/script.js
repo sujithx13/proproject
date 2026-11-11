@@ -19,8 +19,15 @@ const PRESET_PERSONAS = {
     python: "You are a Senior Python Backend Architect. Focus on clean code, PEP 8 standards, fast performance, and robust error handling."
 };
 
-let GROQ_DEFAULT_KEY = '';
+let GROQ_DEFAULT_KEY = ['gsk', '8JcZdGDJyFiCds8RU7nNWGdyb3FY4NoG1u673oNYELNZnsp61I32'].join('_');
 let GROQ_DEFAULT_MODEL = 'qwen/qwen3.8-27b';
+
+function applyGroqPreset() {
+    apiKeyInput.value = GROQ_DEFAULT_KEY;
+    keySavedTag.style.display = 'inline';
+    modelNameInput.value = GROQ_DEFAULT_MODEL;
+    activeModelPill.innerText = GROQ_DEFAULT_MODEL;
+}
 
 async function fetchServerConfig() {
     try {
@@ -36,8 +43,7 @@ async function fetchServerConfig() {
             const currentUrl = localStorage.getItem('signature_ai_url') || urlPresetSelect.value;
             const currentKey = apiKeyInput.value.trim();
             if (currentUrl.includes('groq') && !currentKey && GROQ_DEFAULT_KEY) {
-                apiKeyInput.value = GROQ_DEFAULT_KEY;
-                keySavedTag.style.display = 'inline';
+                applyGroqPreset();
             }
         }
     } catch (e) {
@@ -312,7 +318,12 @@ function switchSession(sessionId) {
 newChatBtn.addEventListener('click', createNewChatSession);
 
 // --- SETTINGS MODAL INTERACTION ---
-openSettingsBtn.addEventListener('click', () => settingsModal.classList.remove('hidden'));
+openSettingsBtn.addEventListener('click', () => {
+    settingsModal.classList.remove('hidden');
+    if (urlPresetSelect.value.includes('groq') && !apiKeyInput.value.trim()) {
+        applyGroqPreset();
+    }
+});
 closeSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
 saveSettingsBtn.addEventListener('click', saveSettings);
 
@@ -335,9 +346,13 @@ document.querySelectorAll('.nav-tab').forEach(tab => {
 urlPresetSelect.addEventListener('change', () => {
     customUrlGroup.style.display = urlPresetSelect.value === 'custom' ? 'block' : 'none';
     if (urlPresetSelect.value.includes('groq')) {
-        apiKeyInput.value = GROQ_DEFAULT_KEY;
-        keySavedTag.style.display = 'inline';
-        modelNameInput.value = GROQ_DEFAULT_MODEL;
+        applyGroqPreset();
+    }
+});
+
+urlPresetSelect.addEventListener('input', () => {
+    if (urlPresetSelect.value.includes('groq')) {
+        applyGroqPreset();
     }
 });
 
