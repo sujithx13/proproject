@@ -27,7 +27,7 @@ def get_config():
 
 
 
-def call_openai_compatible_api(endpoint_url, api_key, model, messages, temperature=0.4, top_p=0.9):
+def call_openai_compatible_api(endpoint_url, api_key, model, messages, temperature=0.4, top_p=0.9, referer="http://localhost:6767"):
     """Calls any OpenAI-compatible chat completion API endpoint."""
     headers = {
         "Content-Type": "application/json",
@@ -36,7 +36,7 @@ def call_openai_compatible_api(endpoint_url, api_key, model, messages, temperatu
         headers["Authorization"] = f"Bearer {api_key.strip()}"
 
     if "openrouter.ai" in endpoint_url:
-        headers["HTTP-Referer"] = "http://localhost:8000"
+        headers["HTTP-Referer"] = referer
         headers["X-Title"] = "Signature AI Workbench"
 
     payload = {
@@ -47,10 +47,21 @@ def call_openai_compatible_api(endpoint_url, api_key, model, messages, temperatu
     }
 
     res = requests.post(endpoint_url, headers=headers, json=payload, timeout=45)
-    res_json = res.json()
+    try:
+        res_json = res.json()
+    except Exception:
+        res_json = {}
 
     if res.status_code != 200:
-        error_msg = res_json.get("error", {}).get("message") or res_json.get("detail") or res_json.get("message") or f"HTTP Error {res.status_code}"
+        err = res_json.get("error")
+        if isinstance(err, dict):
+            error_msg = err.get("message")
+        elif isinstance(err, str):
+            error_msg = err
+        else:
+            error_msg = None
+
+        error_msg = error_msg or res_json.get("detail") or res_json.get("message") or (res.text[:200] if res.text else f"HTTP Error {res.status_code}")
         raise ValueError(f"API Error ({res.status_code}): {error_msg}")
 
     return res_json["choices"][0]["message"]["content"]
@@ -81,7 +92,9 @@ def build_persona():
     ]
 
     try:
-        expanded = call_openai_compatible_api(base_url, api_key, model, messages, temperature=0.3, top_p=0.9)
+        expanded = call_openai_compatible_api(
+            base_url, api_key, model, messages, temperature=0.3, top_p=0.9, referer=request.host_url.rstrip('/')
+        )
         return jsonify({"expanded_persona": expanded.strip()})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -130,7 +143,9 @@ def chat():
 
     start_time = time.time()
     try:
-        ai_reply = call_openai_compatible_api(base_url, api_key, model, messages, temperature=temperature, top_p=top_p)
+        ai_reply = call_openai_compatible_api(
+            base_url, api_key, model, messages, temperature=temperature, top_p=top_p, referer=request.host_url.rstrip('/')
+        )
         latency_ms = int((time.time() - start_time) * 1000)
         return jsonify({
             "reply": ai_reply,

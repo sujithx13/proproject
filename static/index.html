@@ -37,10 +37,10 @@
             <!-- User Profile Footer -->
             <div class="sidebar-user-footer">
                 <div class="user-profile-info">
-                    <div id="userAvatarIcon" class="user-avatar-circle">S</div>
+                    <div id="userAvatarIcon" class="user-avatar-circle">D</div>
                     <div class="user-details">
-                        <span id="sidebarUserName" class="user-name-title">Sujith cbs</span>
-                        <span id="sidebarUserPlan" class="user-plan-badge">Pro</span>
+                        <span id="sidebarUserName" class="user-name-title">Developer</span>
+                        <span id="sidebarUserPlan" class="user-plan-badge">Workbench</span>
                     </div>
                 </div>
                 <button id="openSettingsBtn" class="btn-gear-settings" title="Settings">
@@ -57,6 +57,7 @@
                     <div id="activeModelPill" class="model-pill">gpt-4o-mini</div>
                 </div>
                 <div class="top-bar-right">
+                    <button id="exportChatBtn" class="btn-icon-text" title="Export conversation as Markdown">Export Chat</button>
                     <button id="clearChatBtn" class="btn-icon-text" title="Clear Active Chat">Clear Chat</button>
                 </div>
             </header>
@@ -129,28 +130,15 @@
             </div>
 
             <div class="modal-nav">
-                <button class="nav-tab active" data-tab="tab-account">Account</button>
-                <button class="nav-tab" data-tab="tab-api">API & Model</button>
+                <button class="nav-tab active" data-tab="tab-api">API & Model</button>
+                <button class="nav-tab" data-tab="tab-behavior">Parameters (Temp & Top P)</button>
                 <button class="nav-tab" data-tab="tab-persona">Persona & System</button>
                 <button class="nav-tab" data-tab="tab-appearance">Appearance</button>
-                <button class="nav-tab" data-tab="tab-behavior">Chat Behavior</button>
             </div>
 
             <div class="modal-body">
-                <!-- TAB 0: ACCOUNT PROFILE -->
-                <div id="tab-account" class="tab-content active">
-                    <div class="form-group">
-                        <label for="userNameInput">User Display Name</label>
-                        <input type="text" id="userNameInput" placeholder="Sujith cbs">
-                    </div>
-                    <div class="form-group">
-                        <label for="userPlanInput">Account Badge Subtitle</label>
-                        <input type="text" id="userPlanInput" placeholder="Pro">
-                    </div>
-                </div>
-
                 <!-- TAB 1: API & MODEL -->
-                <div id="tab-api" class="tab-content">
+                <div id="tab-api" class="tab-content active">
                     <div class="form-group">
                         <label for="apiKey">
                             API Key
@@ -270,7 +258,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=groq-fast-3"></script>
+    <script src="script.js?v=clean-v4"></script>
 </body>
 
 </html>

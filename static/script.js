@@ -8,9 +8,6 @@ let currentChatSession = [];  // Current active conversation items
 let savedSessionsList = [];   // Array of saved chat sessions stored in localStorage
 let activeSessionId = null;   // Active session UUID/timestamp
 
-let queryCount = 0;
-let totalLatency = 0;
-
 // Preset Persona Directives
 const PRESET_PERSONAS = {
     cyber: "You are a Senior Cyber Security Auditor. Analyze code, server logs, and vulnerabilities concisely. Highlight risks and actionable fixes.",
@@ -59,13 +56,7 @@ const settingsModal = document.getElementById('settingsModal');
 
 const newChatBtn = document.getElementById('newChatBtn');
 const chatHistoryList = document.getElementById('chatHistoryList');
-
-const sidebarUserName = document.getElementById('sidebarUserName');
-const sidebarUserPlan = document.getElementById('sidebarUserPlan');
-const userAvatarIcon = document.getElementById('userAvatarIcon');
-
-const userNameInput = document.getElementById('userNameInput');
-const userPlanInput = document.getElementById('userPlanInput');
+const exportChatBtn = document.getElementById('exportChatBtn');
 
 const chatWindow = document.getElementById('chatWindow');
 const chatCenterWrapper = document.getElementById('chatCenterWrapper');
@@ -111,13 +102,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function loadSavedSettings() {
-    // User Profile
-    const userName = localStorage.getItem('signature_ai_user_name') || 'Sujith cbs';
-    const userPlan = localStorage.getItem('signature_ai_user_plan') || 'Pro';
-    userNameInput.value = userName;
-    userPlanInput.value = userPlan;
-    updateUserProfileDisplay(userName, userPlan);
-
     // Base URL
     const url = localStorage.getItem('signature_ai_url') || 'https://api.openai.com/v1/chat/completions';
     const matchedOpt = Array.from(urlPresetSelect.options).find(opt => opt.value === url);
@@ -177,19 +161,7 @@ function loadSavedSettings() {
     contextDrawerContainer.style.display = showDrawer ? 'block' : 'none';
 }
 
-function updateUserProfileDisplay(name, plan) {
-    sidebarUserName.innerText = name || 'User';
-    sidebarUserPlan.innerText = plan || 'Pro';
-    userAvatarIcon.innerText = (name || 'U').charAt(0).toUpperCase();
-}
-
 function saveSettings() {
-    const userName = userNameInput.value.trim() || 'Sujith cbs';
-    const userPlan = userPlanInput.value.trim() || 'Pro';
-    localStorage.setItem('signature_ai_user_name', userName);
-    localStorage.setItem('signature_ai_user_plan', userPlan);
-    updateUserProfileDisplay(userName, userPlan);
-
     const key = apiKeyInput.value.trim();
     localStorage.setItem('signature_ai_key', key);
     keySavedTag.style.display = key ? 'inline' : 'none';
@@ -238,7 +210,15 @@ function saveCurrentSessionToStorage() {
     if (!activeSessionId || currentChatSession.length === 0) return;
 
     const firstMsg = currentChatSession.find(m => m.sender === 'User');
-    const title = firstMsg ? (firstMsg.text.length > 28 ? firstMsg.text.substring(0, 28) + '...' : firstMsg.text) : 'New Chat';
+    let title = 'New Chat';
+    if (firstMsg && firstMsg.text) {
+        let cleanText = firstMsg.text.replace(/\[Attached Context Envelope[\s\S]*$/, '').trim();
+        if (cleanText.length > 28) {
+            title = cleanText.substring(0, 28).trim() + '...';
+        } else if (cleanText.length > 0) {
+            title = cleanText;
+        }
+    }
 
     const sessionObj = {
         id: activeSessionId,
@@ -266,11 +246,38 @@ function renderChatHistoryList() {
         item.classList.add('history-item');
         if (session.id === activeSessionId) item.classList.add('active');
 
-        item.innerText = session.title || 'Chat Session';
-        item.addEventListener('click', () => switchSession(session.id));
+        const titleSpan = document.createElement('span');
+        titleSpan.classList.add('history-title');
+        titleSpan.innerText = session.title || 'Chat Session';
+        item.appendChild(titleSpan);
 
+        const delBtn = document.createElement('button');
+        delBtn.classList.add('btn-delete-session');
+        delBtn.innerHTML = '&times;';
+        delBtn.title = 'Delete chat';
+        delBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            deleteSession(session.id);
+        });
+        item.appendChild(delBtn);
+
+        item.addEventListener('click', () => switchSession(session.id));
         chatHistoryList.appendChild(item);
     });
+}
+
+function deleteSession(sessionId) {
+    savedSessionsList = savedSessionsList.filter(s => s.id !== sessionId);
+    localStorage.setItem('signature_ai_chat_sessions', JSON.stringify(savedSessionsList));
+    if (activeSessionId === sessionId) {
+        if (savedSessionsList.length > 0) {
+            switchSession(savedSessionsList[0].id);
+        } else {
+            createNewChatSession();
+        }
+    } else {
+        renderChatHistoryList();
+    }
 }
 
 function createNewChatSession() {
@@ -310,9 +317,50 @@ function switchSession(sessionId) {
             chatCenterWrapper.appendChild(row);
         });
 
+        if (window.hljs) {
+            chatCenterWrapper.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
+        }
+
         renderChatHistoryList();
         chatWindow.scrollTop = chatWindow.scrollHeight;
     }
+}
+
+function exportActiveChatAsMarkdown() {
+    if (!currentChatSession || currentChatSession.length === 0) {
+        alert("No messages to export in the active chat.");
+        return;
+    }
+
+    const activeSession = savedSessionsList.find(s => s.id === activeSessionId);
+    const title = activeSession ? activeSession.title : "Signature AI Chat";
+    const dateStr = new Date().toLocaleString();
+    const model = localStorage.getItem('signature_ai_model') || 'gpt-4o-mini';
+
+    let markdown = `# ${title}\n\n`;
+    markdown += `*Exported on:* ${dateStr}  \n`;
+    markdown += `*Model:* \`${model}\`\n\n`;
+    markdown += `---\n\n`;
+
+    currentChatSession.forEach(msg => {
+        const sender = msg.sender === 'User' ? '### 👤 User' : '### 🤖 Assistant';
+        markdown += `${sender}\n\n${msg.text}\n\n`;
+    });
+
+    const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const cleanFileName = (title.replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 30) || 'chat') + '.md';
+    a.download = cleanFileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+if (exportChatBtn) {
+    exportChatBtn.addEventListener('click', exportActiveChatAsMarkdown);
 }
 
 newChatBtn.addEventListener('click', createNewChatSession);
