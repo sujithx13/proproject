@@ -14,6 +14,32 @@
 </head>
 
 <body class="theme-dark">
+    <!-- DUMMY LOGIN SCREEN -->
+    <div id="loginScreen" class="login-screen-overlay">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="login-brand-icon">🛡️</div>
+                <h2>Signature AI</h2>
+                <p class="login-subtitle">Sign in to access your developer workbench</p>
+            </div>
+            <form id="loginForm" class="login-form">
+                <div id="loginError" class="login-error-msg hidden"></div>
+                <div class="form-group">
+                    <label for="loginUser">Username</label>
+                    <input type="text" id="loginUser" placeholder="admin" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="loginPass">Password</label>
+                    <input type="password" id="loginPass" placeholder="••••••••" required autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn-login-submit">Sign In</button>
+                <div class="login-hint">
+                    Default credentials: <code>admin</code> / <code>67admin69</code>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div class="app-layout">
         <!-- FIXED SIDEBAR (GEMINI STYLED) -->
         <aside class="sidebar">
@@ -37,15 +63,20 @@
             <!-- User Profile Footer -->
             <div class="sidebar-user-footer">
                 <div class="user-profile-info">
-                    <div id="userAvatarIcon" class="user-avatar-circle">D</div>
+                    <div id="userAvatarIcon" class="user-avatar-circle">A</div>
                     <div class="user-details">
-                        <span id="sidebarUserName" class="user-name-title">Developer</span>
-                        <span id="sidebarUserPlan" class="user-plan-badge">Workbench</span>
+                        <span id="sidebarUserName" class="user-name-title">admin</span>
+                        <span id="sidebarUserPlan" class="user-plan-badge">Authenticated</span>
                     </div>
                 </div>
-                <button id="openSettingsBtn" class="btn-gear-settings" title="Settings">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-                </button>
+                <div class="footer-actions">
+                    <button id="openSettingsBtn" class="btn-gear-settings" title="Settings">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                    </button>
+                    <button id="logoutBtn" class="btn-logout" title="Sign Out">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                    </button>
+                </div>
             </div>
         </aside>
 
@@ -258,7 +289,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=clean-v4"></script>
+    <script src="script.js?v=auth-v5"></script>
 </body>
 
 </html>

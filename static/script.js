@@ -54,6 +54,17 @@ const closeSettingsBtn = document.getElementById('closeSettingsBtn');
 const saveSettingsBtn = document.getElementById('saveSettingsBtn');
 const settingsModal = document.getElementById('settingsModal');
 
+// Login & Auth DOM
+const loginScreen = document.getElementById('loginScreen');
+const loginForm = document.getElementById('loginForm');
+const loginUser = document.getElementById('loginUser');
+const loginPass = document.getElementById('loginPass');
+const loginError = document.getElementById('loginError');
+const logoutBtn = document.getElementById('logoutBtn');
+
+const AUTH_USER = 'admin';
+const AUTH_PASS = '67admin69';
+
 const newChatBtn = document.getElementById('newChatBtn');
 const chatHistoryList = document.getElementById('chatHistoryList');
 const exportChatBtn = document.getElementById('exportChatBtn');
@@ -95,6 +106,7 @@ const toggleContextDrawer = document.getElementById('toggleContextDrawer');
 
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
+    checkAuthStatus();
     fetchServerConfig();
     loadSavedSettings();
     loadChatSessions();
@@ -364,6 +376,45 @@ if (exportChatBtn) {
 }
 
 newChatBtn.addEventListener('click', createNewChatSession);
+
+// --- AUTHENTICATION LOGIC ---
+function checkAuthStatus() {
+    const isAuth = localStorage.getItem('signature_ai_auth') === 'true';
+    if (isAuth) {
+        loginScreen.classList.add('hidden');
+    } else {
+        loginScreen.classList.remove('hidden');
+        if (loginUser) loginUser.focus();
+    }
+}
+
+if (loginForm) {
+    loginForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const username = loginUser.value.trim();
+        const password = loginPass.value;
+
+        if (username === AUTH_USER && password === AUTH_PASS) {
+            localStorage.setItem('signature_ai_auth', 'true');
+            loginError.classList.add('hidden');
+            loginUser.value = '';
+            loginPass.value = '';
+            loginScreen.classList.add('hidden');
+        } else {
+            loginError.innerText = 'Invalid credentials. Default: admin / 67admin69';
+            loginError.classList.remove('hidden');
+        }
+    });
+}
+
+if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+        if (confirm("Log out of Signature AI?")) {
+            localStorage.removeItem('signature_ai_auth');
+            checkAuthStatus();
+        }
+    });
+}
 
 // --- SETTINGS MODAL INTERACTION ---
 openSettingsBtn.addEventListener('click', () => {
